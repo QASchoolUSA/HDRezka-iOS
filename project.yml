@@ -1,0 +1,67 @@
+name: HDRezkaApp
+options:
+  bundleIdPrefix: com.hdrezka
+  xcodeVersion: "15.0"
+  deploymentTarget:
+    iOS: "17.0"
+  defaultConfig: Debug
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    CODE_SIGNING_ALLOWED: NO
+    CODE_SIGNING_REQUIRED: NO
+    CODE_SIGN_IDENTITY: ""
+
+targets:
+  HDRezkaCore:
+    type: framework
+    platform: iOS
+    sources:
+      - path: Sources/HDRezkaCore
+    settings:
+      base:
+        PRODUCT_NAME: HDRezkaCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.hdrezka.core
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+
+  HDRezkaApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/HDRezkaApp
+    dependencies:
+      - target: HDRezkaCore
+    settings:
+      base:
+        PRODUCT_NAME: HDRezkaApp
+        PRODUCT_BUNDLE_IDENTIFIER: com.hdrezka.app
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "HDRezka"
+        INFOPLIST_KEY_UILaunchStoryboardName: "LaunchScreen"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UIBackgroundModes: "audio"
+        INFOPLIST_KEY_NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: YES
+        ENABLE_PREVIEWS: YES
+
+  HDRezkaCoreTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/HDRezkaCoreTests
+    dependencies:
+      - target: HDRezkaCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hdrezka.coretests
+        GENERATE_INFOPLIST_FILE: YES

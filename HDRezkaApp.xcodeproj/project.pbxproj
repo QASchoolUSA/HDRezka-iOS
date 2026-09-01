@@ -1,0 +1,767 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		08DF48CD49B147189EDF0699 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA86D114F7E4B98F88064AAD /* SearchView.swift */; };
+		095DBC62834C95EB576F07D4 /* HomeFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFCB6403950AF040FDC7444E /* HomeFeedView.swift */; };
+		0CD0BC598114B734EF32F296 /* RezkaStreamDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8B550B959899424C84318A /* RezkaStreamDecoder.swift */; };
+		16481E615D8B5509904777F4 /* RezkaStreamDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D9A3B330AB088AD975D7BD /* RezkaStreamDecoderTests.swift */; };
+		1A77657364E509A7A35C9321 /* LocalStorageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC113B8BEC17E1CD3861421D /* LocalStorageManager.swift */; };
+		21087E1221E6EDAC513657D0 /* CloudflareClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37F00EB63DE501EC413D050B /* CloudflareClient.swift */; };
+		30A53AFE62742B2830FB90CD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B367B81F591A35647629EEF /* SettingsView.swift */; };
+		33D3FBF4F8A689264A618DE3 /* HDRezkaCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BFCF942525C10B2D636FADF /* HDRezkaCore.framework */; };
+		47527A11A31ABD4795BF778A /* MediaRowSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95B7FF89001145E230507298 /* MediaRowSectionView.swift */; };
+		4B3DD2B8DE4DBCFD4A90B690 /* MediaModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C86E1E7297D5973F8718BC33 /* MediaModels.swift */; };
+		60DCD386BBE4FE20BB935ABD /* MediaDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 315CA82CD5C2313AC01D2E1F /* MediaDetailView.swift */; };
+		739D2F700E80B7BCE8DBA9C4 /* PlaybackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9271A5E9FAA1D48A5A12F22D /* PlaybackManager.swift */; };
+		7480BC4370B26A59F4213228 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EEC663D00B8FF9944180866 /* Theme.swift */; };
+		85C0670A7D438D0B0E1C9027 /* ConvexClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4EFBB401C8931119F14036E /* ConvexClient.swift */; };
+		8C20FF6E60676F0289EC9AF5 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F6EE8470B14C1DABEE45B5 /* LibraryView.swift */; };
+		9354696F1F3C4D3A4287195C /* CustomPlayerOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E95A72D0F48D2816339CF58 /* CustomPlayerOverlayView.swift */; };
+		A6030832B4B77146CBD17520 /* HDRezkaCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BFCF942525C10B2D636FADF /* HDRezkaCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		B5615C3EA33889F902897E9A /* HDRezkaScraperEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AB83D20817F91F57B21F73A /* HDRezkaScraperEngine.swift */; };
+		B633D9013B16F4C4B16C4D0E /* HDRezkaCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BFCF942525C10B2D636FADF /* HDRezkaCore.framework */; };
+		B696B96470088FC69D4E538C /* MirrorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5EA419F155B0BFF77C71AD /* MirrorManager.swift */; };
+		C0509D93608FFF4C05B8570D /* HDRezkaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E78AE0CEB7A584CC7C6F1D /* HDRezkaApp.swift */; };
+		CED1710C17E50544B7B22580 /* MediaCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99C7D3B321909AB58B20F9D1 /* MediaCardView.swift */; };
+		E9DD2750C38D4449ABD3AF0A /* HeroCarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7AED0C89F6DF811EDFF3A28 /* HeroCarouselView.swift */; };
+		F6DFA7ACDA0B5F62E86CF4FA /* SubtitleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BCBB6B5DCD0EDFB0C0709BD /* SubtitleManager.swift */; };
+		FBC3DD55101B3E7BF7C11F59 /* AppRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63778D18BE51A5FA3D86A850 /* AppRootView.swift */; };
+		FF0750579BB1F537BBF6DF8A /* HDRezkaCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9BFCF942525C10B2D636FADF /* HDRezkaCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1263D4DE4CEF3BBCD6CE114 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6D37BC49168CD6ACE140FAC1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D15464B71E4801E03C41D29A;
+			remoteInfo = HDRezkaCore;
+		};
+		B961FA53BB6E49D930C9EF2B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6D37BC49168CD6ACE140FAC1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D15464B71E4801E03C41D29A;
+			remoteInfo = HDRezkaCore;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		47C546BE5B8CC463AB425CDC /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A6030832B4B77146CBD17520 /* HDRezkaCore.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CEFE035B3D599D51B91453B3 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				FF0750579BB1F537BBF6DF8A /* HDRezkaCore.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0B5EA419F155B0BFF77C71AD /* MirrorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MirrorManager.swift; sourceTree = "<group>"; };
+		20D9A3B330AB088AD975D7BD /* RezkaStreamDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RezkaStreamDecoderTests.swift; sourceTree = "<group>"; };
+		315CA82CD5C2313AC01D2E1F /* MediaDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetailView.swift; sourceTree = "<group>"; };
+		37F00EB63DE501EC413D050B /* CloudflareClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudflareClient.swift; sourceTree = "<group>"; };
+		3B367B81F591A35647629EEF /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		3BCBB6B5DCD0EDFB0C0709BD /* SubtitleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubtitleManager.swift; sourceTree = "<group>"; };
+		3D8B550B959899424C84318A /* RezkaStreamDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RezkaStreamDecoder.swift; sourceTree = "<group>"; };
+		3E95A72D0F48D2816339CF58 /* CustomPlayerOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPlayerOverlayView.swift; sourceTree = "<group>"; };
+		63778D18BE51A5FA3D86A850 /* AppRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRootView.swift; sourceTree = "<group>"; };
+		6AB83D20817F91F57B21F73A /* HDRezkaScraperEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HDRezkaScraperEngine.swift; sourceTree = "<group>"; };
+		7ECCC252DF531DD00B9A4A60 /* HDRezkaCoreTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = HDRezkaCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7EEC663D00B8FF9944180866 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		88B35F643844CE934927207E /* HDRezkaApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = HDRezkaApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9271A5E9FAA1D48A5A12F22D /* PlaybackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackManager.swift; sourceTree = "<group>"; };
+		95B7FF89001145E230507298 /* MediaRowSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaRowSectionView.swift; sourceTree = "<group>"; };
+		99C7D3B321909AB58B20F9D1 /* MediaCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaCardView.swift; sourceTree = "<group>"; };
+		9BFCF942525C10B2D636FADF /* HDRezkaCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = HDRezkaCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		A7AED0C89F6DF811EDFF3A28 /* HeroCarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroCarouselView.swift; sourceTree = "<group>"; };
+		B6F6EE8470B14C1DABEE45B5 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		C4EFBB401C8931119F14036E /* ConvexClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexClient.swift; sourceTree = "<group>"; };
+		C86E1E7297D5973F8718BC33 /* MediaModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaModels.swift; sourceTree = "<group>"; };
+		DFCB6403950AF040FDC7444E /* HomeFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFeedView.swift; sourceTree = "<group>"; };
+		E8E78AE0CEB7A584CC7C6F1D /* HDRezkaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HDRezkaApp.swift; sourceTree = "<group>"; };
+		FA86D114F7E4B98F88064AAD /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		FC113B8BEC17E1CD3861421D /* LocalStorageManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStorageManager.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C52A91D86449FDB75B426455 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B633D9013B16F4C4B16C4D0E /* HDRezkaCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F222EDD0B9FEFE9CFE761B68 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				33D3FBF4F8A689264A618DE3 /* HDRezkaCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		017CA5E490C660888DD1BAFE /* HDRezkaCoreTests */ = {
+			isa = PBXGroup;
+			children = (
+				20D9A3B330AB088AD975D7BD /* RezkaStreamDecoderTests.swift */,
+			);
+			name = HDRezkaCoreTests;
+			path = Tests/HDRezkaCoreTests;
+			sourceTree = "<group>";
+		};
+		0C8F43A8A20586B7D1E8EEFF /* Detail */ = {
+			isa = PBXGroup;
+			children = (
+				315CA82CD5C2313AC01D2E1F /* MediaDetailView.swift */,
+			);
+			path = Detail;
+			sourceTree = "<group>";
+		};
+		13442858A8CACD00649B727B /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				C86E1E7297D5973F8718BC33 /* MediaModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		2672E880DEA9FAC13C9F5C64 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				6AB83D20817F91F57B21F73A /* HDRezkaScraperEngine.swift */,
+				0B5EA419F155B0BFF77C71AD /* MirrorManager.swift */,
+				3D8B550B959899424C84318A /* RezkaStreamDecoder.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
+		28A2A1FA2129752831CF42E5 /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				63778D18BE51A5FA3D86A850 /* AppRootView.swift */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		3104F8304418CBA43C535BA0 /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				9271A5E9FAA1D48A5A12F22D /* PlaybackManager.swift */,
+				3BCBB6B5DCD0EDFB0C0709BD /* SubtitleManager.swift */,
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
+		34A93DA4997D09BADC76EBEE /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				DFCB6403950AF040FDC7444E /* HomeFeedView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		3B0AFA5BFC6EBE9FCB56029F /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A7AED0C89F6DF811EDFF3A28 /* HeroCarouselView.swift */,
+				99C7D3B321909AB58B20F9D1 /* MediaCardView.swift */,
+				95B7FF89001145E230507298 /* MediaRowSectionView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		3D14F2BA4D4791A9FCC12365 /* HDRezkaApp */ = {
+			isa = PBXGroup;
+			children = (
+				E8E78AE0CEB7A584CC7C6F1D /* HDRezkaApp.swift */,
+			);
+			name = HDRezkaApp;
+			path = Sources/HDRezkaApp;
+			sourceTree = "<group>";
+		};
+		4B59B7B921BE51DE7A3F4723 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				3B367B81F591A35647629EEF /* SettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		59BC35EEC58C0596073DD227 /* HDRezkaCore */ = {
+			isa = PBXGroup;
+			children = (
+				A573EC4E432F1FFEE673B4C5 /* Cloud */,
+				2672E880DEA9FAC13C9F5C64 /* Engine */,
+				13442858A8CACD00649B727B /* Models */,
+				3104F8304418CBA43C535BA0 /* Player */,
+				936C2593B8CC0045AF183A98 /* Storage */,
+				7C1FF664913693BECC4363C3 /* Views */,
+			);
+			name = HDRezkaCore;
+			path = Sources/HDRezkaCore;
+			sourceTree = "<group>";
+		};
+		6CD293A39FB8B600C6B4B183 = {
+			isa = PBXGroup;
+			children = (
+				3D14F2BA4D4791A9FCC12365 /* HDRezkaApp */,
+				59BC35EEC58C0596073DD227 /* HDRezkaCore */,
+				017CA5E490C660888DD1BAFE /* HDRezkaCoreTests */,
+				C0D80B8FE7EEE543BD13C21C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7C1FF664913693BECC4363C3 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				3B0AFA5BFC6EBE9FCB56029F /* Components */,
+				F3D1F84CC1C596E8C4CBE2E4 /* DesignSystem */,
+				0C8F43A8A20586B7D1E8EEFF /* Detail */,
+				34A93DA4997D09BADC76EBEE /* Home */,
+				A576A221ED7EE50F3848BEBB /* Library */,
+				28A2A1FA2129752831CF42E5 /* Navigation */,
+				953E7BA60F27D92AF952941C /* Player */,
+				8966AB52172821E200B1A4CB /* Search */,
+				4B59B7B921BE51DE7A3F4723 /* Settings */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		8966AB52172821E200B1A4CB /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				FA86D114F7E4B98F88064AAD /* SearchView.swift */,
+			);
+			path = Search;
+			sourceTree = "<group>";
+		};
+		936C2593B8CC0045AF183A98 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				FC113B8BEC17E1CD3861421D /* LocalStorageManager.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
+		953E7BA60F27D92AF952941C /* Player */ = {
+			isa = PBXGroup;
+			children = (
+				3E95A72D0F48D2816339CF58 /* CustomPlayerOverlayView.swift */,
+			);
+			path = Player;
+			sourceTree = "<group>";
+		};
+		A573EC4E432F1FFEE673B4C5 /* Cloud */ = {
+			isa = PBXGroup;
+			children = (
+				37F00EB63DE501EC413D050B /* CloudflareClient.swift */,
+				C4EFBB401C8931119F14036E /* ConvexClient.swift */,
+			);
+			path = Cloud;
+			sourceTree = "<group>";
+		};
+		A576A221ED7EE50F3848BEBB /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				B6F6EE8470B14C1DABEE45B5 /* LibraryView.swift */,
+			);
+			path = Library;
+			sourceTree = "<group>";
+		};
+		C0D80B8FE7EEE543BD13C21C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				88B35F643844CE934927207E /* HDRezkaApp.app */,
+				9BFCF942525C10B2D636FADF /* HDRezkaCore.framework */,
+				7ECCC252DF531DD00B9A4A60 /* HDRezkaCoreTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		F3D1F84CC1C596E8C4CBE2E4 /* DesignSystem */ = {
+			isa = PBXGroup;
+			children = (
+				7EEC663D00B8FF9944180866 /* Theme.swift */,
+			);
+			path = DesignSystem;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		25C6A49AD8976B1F762DC0C0 /* HDRezkaCoreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 25FDF7A13A79E5429F0E2885 /* Build configuration list for PBXNativeTarget "HDRezkaCoreTests" */;
+			buildPhases = (
+				6804E6F3877728698867DCD7 /* Sources */,
+				F222EDD0B9FEFE9CFE761B68 /* Frameworks */,
+				47C546BE5B8CC463AB425CDC /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				12FA14CAE9AF396CBFE408FF /* PBXTargetDependency */,
+			);
+			name = HDRezkaCoreTests;
+			packageProductDependencies = (
+			);
+			productName = HDRezkaCoreTests;
+			productReference = 7ECCC252DF531DD00B9A4A60 /* HDRezkaCoreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		8F669F156EDCDC3D8C7FF545 /* HDRezkaApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F41BE4C86FAAAE10D165CDCD /* Build configuration list for PBXNativeTarget "HDRezkaApp" */;
+			buildPhases = (
+				4B696259D6D3E96C38AD0735 /* Sources */,
+				C52A91D86449FDB75B426455 /* Frameworks */,
+				CEFE035B3D599D51B91453B3 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A782B1179CA48D2F7CA4B54A /* PBXTargetDependency */,
+			);
+			name = HDRezkaApp;
+			packageProductDependencies = (
+			);
+			productName = HDRezkaApp;
+			productReference = 88B35F643844CE934927207E /* HDRezkaApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D15464B71E4801E03C41D29A /* HDRezkaCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9F542394520A2941B399FE2A /* Build configuration list for PBXNativeTarget "HDRezkaCore" */;
+			buildPhases = (
+				BC41AF93DF4C3470825048B7 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HDRezkaCore;
+			packageProductDependencies = (
+			);
+			productName = HDRezkaCore;
+			productReference = 9BFCF942525C10B2D636FADF /* HDRezkaCore.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6D37BC49168CD6ACE140FAC1 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = 3C02FCA7D6A09324E9758C36 /* Build configuration list for PBXProject "HDRezkaApp" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 6CD293A39FB8B600C6B4B183;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = C0D80B8FE7EEE543BD13C21C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D15464B71E4801E03C41D29A /* HDRezkaCore */,
+				8F669F156EDCDC3D8C7FF545 /* HDRezkaApp */,
+				25C6A49AD8976B1F762DC0C0 /* HDRezkaCoreTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4B696259D6D3E96C38AD0735 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0509D93608FFF4C05B8570D /* HDRezkaApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6804E6F3877728698867DCD7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				16481E615D8B5509904777F4 /* RezkaStreamDecoderTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC41AF93DF4C3470825048B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FBC3DD55101B3E7BF7C11F59 /* AppRootView.swift in Sources */,
+				21087E1221E6EDAC513657D0 /* CloudflareClient.swift in Sources */,
+				85C0670A7D438D0B0E1C9027 /* ConvexClient.swift in Sources */,
+				9354696F1F3C4D3A4287195C /* CustomPlayerOverlayView.swift in Sources */,
+				B5615C3EA33889F902897E9A /* HDRezkaScraperEngine.swift in Sources */,
+				E9DD2750C38D4449ABD3AF0A /* HeroCarouselView.swift in Sources */,
+				095DBC62834C95EB576F07D4 /* HomeFeedView.swift in Sources */,
+				8C20FF6E60676F0289EC9AF5 /* LibraryView.swift in Sources */,
+				1A77657364E509A7A35C9321 /* LocalStorageManager.swift in Sources */,
+				CED1710C17E50544B7B22580 /* MediaCardView.swift in Sources */,
+				60DCD386BBE4FE20BB935ABD /* MediaDetailView.swift in Sources */,
+				4B3DD2B8DE4DBCFD4A90B690 /* MediaModels.swift in Sources */,
+				47527A11A31ABD4795BF778A /* MediaRowSectionView.swift in Sources */,
+				B696B96470088FC69D4E538C /* MirrorManager.swift in Sources */,
+				739D2F700E80B7BCE8DBA9C4 /* PlaybackManager.swift in Sources */,
+				0CD0BC598114B734EF32F296 /* RezkaStreamDecoder.swift in Sources */,
+				08DF48CD49B147189EDF0699 /* SearchView.swift in Sources */,
+				30A53AFE62742B2830FB90CD /* SettingsView.swift in Sources */,
+				F6DFA7ACDA0B5F62E86CF4FA /* SubtitleManager.swift in Sources */,
+				7480BC4370B26A59F4213228 /* Theme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		12FA14CAE9AF396CBFE408FF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D15464B71E4801E03C41D29A /* HDRezkaCore */;
+			targetProxy = A1263D4DE4CEF3BBCD6CE114 /* PBXContainerItemProxy */;
+		};
+		A782B1179CA48D2F7CA4B54A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D15464B71E4801E03C41D29A /* HDRezkaCore */;
+			targetProxy = B961FA53BB6E49D930C9EF2B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		18F74389D74DEE954AA4CA1B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = HDRezka;
+				INFOPLIST_KEY_NSAppTransportSecurity = "[\"NSAllowsArbitraryLoads\": true]";
+				INFOPLIST_KEY_UIBackgroundModes = audio;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.app;
+				PRODUCT_NAME = HDRezkaApp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		60B4C11F4C38D4C2A1ACB8CC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.coretests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		95A37796E43F343F2441B816 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		D98C43B036AB15AB5F8B8A6E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 6MM44B6ZYT;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.core;
+				PRODUCT_NAME = HDRezkaCore;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		F001AEEC843DE43FD0ECDEDF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = HDRezka;
+				INFOPLIST_KEY_NSAppTransportSecurity = "[\"NSAllowsArbitraryLoads\": true]";
+				INFOPLIST_KEY_UIBackgroundModes = audio;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.app;
+				PRODUCT_NAME = HDRezkaApp;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F0E0BE3782B6728DB180EFB1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_IDENTITY = "";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		F211DEF67B7478A1FB6B9B60 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.coretests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F93D1EDADD1E89787E3AA786 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = 6MM44B6ZYT;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.core;
+				PRODUCT_NAME = HDRezkaCore;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		25FDF7A13A79E5429F0E2885 /* Build configuration list for PBXNativeTarget "HDRezkaCoreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F211DEF67B7478A1FB6B9B60 /* Debug */,
+				60B4C11F4C38D4C2A1ACB8CC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3C02FCA7D6A09324E9758C36 /* Build configuration list for PBXProject "HDRezkaApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F0E0BE3782B6728DB180EFB1 /* Debug */,
+				95A37796E43F343F2441B816 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9F542394520A2941B399FE2A /* Build configuration list for PBXNativeTarget "HDRezkaCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D98C43B036AB15AB5F8B8A6E /* Debug */,
+				F93D1EDADD1E89787E3AA786 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F41BE4C86FAAAE10D165CDCD /* Build configuration list for PBXNativeTarget "HDRezkaApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F001AEEC843DE43FD0ECDEDF /* Debug */,
+				18F74389D74DEE954AA4CA1B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6D37BC49168CD6ACE140FAC1 /* Project object */;
+}

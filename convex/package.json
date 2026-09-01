@@ -1,0 +1,15 @@
+{
+  "name": "hdrezka-convex-backend",
+  "version": "1.0.0",
+  "description": "Zero-Cost Real-Time Cloud Sync Backend for HDRezka App",
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy"
+  },
+  "dependencies": {
+    "convex": "^1.12.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

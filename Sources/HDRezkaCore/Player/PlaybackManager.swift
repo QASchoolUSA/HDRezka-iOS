@@ -122,7 +122,14 @@ public final class PlaybackManager: ObservableObject {
     }
     
     private func loadStream(_ stream: StreamOption, resumeAt: Double = 0) {
-        let playerItem = AVPlayerItem(url: stream.url)
+        let headers: [String: String] = [
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
+            "Referer": "https://rezka.ag/"
+        ]
+        let asset = AVURLAsset(url: stream.url, options: ["AVURLAssetHTTPHeaderFieldsKey": headers])
+        let playerItem = AVPlayerItem(asset: asset)
+        playerItem.preferredForwardBufferDuration = 5
+        player.automaticallyWaitsToMinimizeStalling = true
         
         // Observe status
         itemStatusObserver?.invalidate()
@@ -139,6 +146,7 @@ public final class PlaybackManager: ObservableObject {
                     self.updateNowPlayingInfo()
                 } else if item.status == .failed {
                     self.isBuffering = false
+                    print("⚠️ AVPlayerItem failed: \(String(describing: item.error))")
                 }
             }
         }
@@ -149,11 +157,14 @@ public final class PlaybackManager: ObservableObject {
             Task { @MainActor [weak self] in
                 guard let self = self, let timeRange = item.loadedTimeRanges.first?.timeRangeValue else { return }
                 self.bufferedTime = timeRange.start.seconds + timeRange.duration.seconds
+                if item.isPlaybackLikelyToKeepUp {
+                    self.isBuffering = false
+                }
             }
         }
         
         player.replaceCurrentItem(with: playerItem)
-        player.rate = playbackRate
+        self.play()
     }
     
     // MARK: - Transport Controls

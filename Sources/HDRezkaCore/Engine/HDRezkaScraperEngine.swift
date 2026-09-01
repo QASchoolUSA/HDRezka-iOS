@@ -530,36 +530,42 @@ public enum MockDataProvider {
     }
     
     public static func mockStreamBundle(season: Int? = nil, episode: Int? = nil, translationId: String? = nil) -> StreamBundle {
-        // High quality HLS Apple test streams + Big Buck Bunny / Tears of Steel multi-res streams
+        // High quality verified multi-resolution Apple HLS & Mux adaptive streams
         let streams = [
             StreamOption(
                 quality: .res4K,
                 rawResolutionLabel: "4K Ultra HD",
-                url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")!,
-                isHLS: false
+                url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!,
+                isHLS: true
             ),
             StreamOption(
                 quality: .res1080pUltra,
                 rawResolutionLabel: "1080p Ultra",
-                url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4")!,
-                isHLS: false
+                url: URL(string: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")!,
+                isHLS: true
             ),
             StreamOption(
                 quality: .res1080p,
                 rawResolutionLabel: "1080p",
-                url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4")!,
-                isHLS: false
+                url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!,
+                isHLS: true
             ),
             StreamOption(
                 quality: .res720p,
                 rawResolutionLabel: "720p",
-                url: URL(string: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4")!,
+                url: URL(string: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")!,
+                isHLS: true
+            ),
+            StreamOption(
+                quality: .res480p,
+                rawResolutionLabel: "480p",
+                url: URL(string: "https://media.w3.org/2010/05/sintel/trailer.mp4")!,
                 isHLS: false
             ),
             StreamOption(
                 quality: .auto,
                 rawResolutionLabel: "Auto HLS",
-                url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8")!,
+                url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!,
                 isHLS: true
             )
         ]

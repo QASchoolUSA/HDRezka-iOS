@@ -99,6 +99,50 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (reqUrl.pathname === "/proxy") {
+    const target = reqUrl.searchParams.get("url");
+    if (!target) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Missing url parameter" }));
+      return;
+    }
+
+    try {
+      const streamUrl = new URL(target);
+      const isHttps = streamUrl.protocol === "https:";
+      const client = isHttps ? https : http;
+
+      const pReq = client.request(
+        streamUrl,
+        {
+          method: req.method,
+          headers: {
+            ...req.headers,
+            host: streamUrl.hostname,
+            referer: `${fastestMirror}/`,
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+          }
+        },
+        (pRes) => {
+          res.writeHead(pRes.statusCode || 200, pRes.headers);
+          pRes.pipe(res);
+        }
+      );
+
+      pReq.on("error", (err) => {
+        res.writeHead(502, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Stream proxy error", message: err.message }));
+      });
+
+      req.pipe(pReq);
+      return;
+    } catch (err: any) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Invalid stream url", message: err.message }));
+      return;
+    }
+  }
+
   // Proxy / Forward request to active mirror
   const targetUrl = new URL(reqUrl.pathname + reqUrl.search, fastestMirror);
   const proxyReq = https.request(

@@ -5,6 +5,8 @@ public actor HDRezkaScraperEngine {
     public static let shared = HDRezkaScraperEngine()
     
     private let session: URLSession
+    private var cookieJar: [String: String] = [:]
+    
     private let defaultHeaders: [String: String] = [
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
@@ -21,18 +23,89 @@ public actor HDRezkaScraperEngine {
         config.httpCookieAcceptPolicy = .always
         config.httpShouldSetCookies = true
         self.session = URLSession(configuration: config)
+        
+        // Load saved cookies from UserDefaults
+        if let saved = UserDefaults.standard.dictionary(forKey: "hdrezka_cookie_jar") as? [String: String] {
+            self.cookieJar = saved
+        }
     }
     
-    // MARK: - Execute Request with Anubis PoW Auto-Solver
+    // MARK: - Cookie Management
+    private func saveCookies(from response: HTTPURLResponse) {
+        // Parse Set-Cookie headers
+        var rawCookies: [String] = []
+        if let single = response.value(forHTTPHeaderField: "Set-Cookie") {
+            rawCookies.append(single)
+        }
+        if let allHeaders = response.allHeaderFields as? [String: String],
+           let setCookie = allHeaders["Set-Cookie"] {
+            rawCookies.append(setCookie)
+        }
+        
+        for cookieStr in rawCookies {
+            let parts = cookieStr.components(separatedBy: ",")
+            for part in parts {
+                let items = part.components(separatedBy: ";")
+                if let first = items.first {
+                    let pair = first.split(separator: "=", maxSplits: 1).map(String.init)
+                    if pair.count == 2 {
+                        let k = pair[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                        let v = pair[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !k.isEmpty && v != "deleted" && !v.isEmpty {
+                            cookieJar[k] = v
+                        }
+                    }
+                }
+            }
+        }
+        
+        UserDefaults.standard.set(cookieJar, forKey: "hdrezka_cookie_jar")
+    }
+    
+    public func setManualCookieString(_ cookieString: String) {
+        let pairs = cookieString.components(separatedBy: ";")
+        for p in pairs {
+            let parts = p.split(separator: "=", maxSplits: 1).map(String.init)
+            if parts.count == 2 {
+                let k = parts[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                let v = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !k.isEmpty && !v.isEmpty {
+                    cookieJar[k] = v
+                }
+            }
+        }
+        UserDefaults.standard.set(cookieJar, forKey: "hdrezka_cookie_jar")
+    }
+    
+    public func getCookieString() -> String {
+        return cookieJar.map { "\($0.key)=\($0.value)" }.joined(separator: "; ")
+    }
+    
+    public func clearCookies() {
+        cookieJar.removeAll()
+        UserDefaults.standard.removeObject(forKey: "hdrezka_cookie_jar")
+        UserDefaults.standard.removeObject(forKey: "rezka_logged_in")
+        UserDefaults.standard.removeObject(forKey: "rezka_username")
+    }
+    
+    // MARK: - Execute Request with Anubis PoW Auto-Solver & Cookie Injection
     private func executeRequest(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        let (data, response) = try await session.data(for: request)
+        var req = request
+        let cookieHeader = getCookieString()
+        if !cookieHeader.isEmpty {
+            req.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+        }
+        
+        let (data, response) = try await session.data(for: req)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
         
+        saveCookies(from: httpResponse)
+        
         // Check if Anubis anti-bot challenge was returned
         if let html = String(data: data, encoding: .utf8), html.contains("anubis_challenge") {
-            if let solved = try? await solveAnubisChallenge(from: html, originalRequest: request) {
+            if let solved = try? await solveAnubisChallenge(from: html, originalRequest: req) {
                 return solved
             }
         }
@@ -89,16 +162,64 @@ public actor HDRezkaScraperEngine {
             passRequest.setValue(v, forHTTPHeaderField: k)
         }
         passRequest.setValue(originalURL.absoluteString, forHTTPHeaderField: "Referer")
+        let cookieHeader = getCookieString()
+        if !cookieHeader.isEmpty {
+            passRequest.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+        }
         
-        // Execute pass-challenge to store session cookies in URLSession
-        _ = try? await session.data(for: passRequest)
+        // Execute pass-challenge
+        let (_, passResponse) = try await session.data(for: passRequest)
+        if let passHttp = passResponse as? HTTPURLResponse {
+            saveCookies(from: passHttp)
+        }
         
-        // Re-execute original request with newly set auth cookies
-        let (retryData, retryResponse) = try await session.data(for: originalRequest)
+        // Re-execute original request with newly saved auth cookies
+        var retryRequest = originalRequest
+        let newCookieHeader = getCookieString()
+        if !newCookieHeader.isEmpty {
+            retryRequest.setValue(newCookieHeader, forHTTPHeaderField: "Cookie")
+        }
+        
+        let (retryData, retryResponse) = try await session.data(for: retryRequest)
         guard let retryHttp = retryResponse as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
         }
+        saveCookies(from: retryHttp)
         return (retryData, retryHttp)
+    }
+    
+    // MARK: - HDRezka Account Login
+    public func login(username: String, password: String) async throws -> Bool {
+        let mirror = await MirrorManager.shared.getActiveMirror()
+        guard let url = URL(string: "/ajax/login/", relativeTo: mirror) else {
+            return false
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        for (k, v) in defaultHeaders {
+            request.setValue(v, forHTTPHeaderField: k)
+        }
+        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
+        request.setValue("application/x-www-form-urlencoded; charset=UTF-8", forHTTPHeaderField: "Content-Type")
+        request.setValue(mirror.absoluteString, forHTTPHeaderField: "Referer")
+        request.setValue(mirror.absoluteString, forHTTPHeaderField: "Origin")
+        
+        let bodyString = "login_name=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&login_password=\(password.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&login_not_save=0"
+        request.httpBody = bodyString.data(using: .utf8)
+        
+        do {
+            let (data, response) = try await executeRequest(request)
+            guard response.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let success = json["success"] as? Bool, success else {
+                return false
+            }
+            saveCookies(from: response)
+            return true
+        } catch {
+            return false
+        }
     }
     
     // MARK: - Fetch Catalog Feeds
@@ -203,38 +324,6 @@ public actor HDRezkaScraperEngine {
             return parseDetailHTML(html, item: item, baseURL: mirror)
         } catch {
             return MockDataProvider.mockDetail(for: item)
-        }
-    }
-    
-    // MARK: - HDRezka Account Login
-    public func login(username: String, password: String) async throws -> Bool {
-        let mirror = await MirrorManager.shared.getActiveMirror()
-        guard let url = URL(string: "/ajax/login/", relativeTo: mirror) else {
-            return false
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        for (k, v) in defaultHeaders {
-            request.setValue(v, forHTTPHeaderField: k)
-        }
-        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
-        request.setValue("application/x-www-form-urlencoded; charset=UTF-8", forHTTPHeaderField: "Content-Type")
-        request.setValue(mirror.absoluteString, forHTTPHeaderField: "Referer")
-        
-        let bodyString = "login_name=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&login_password=\(password.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&login_not_save=0"
-        request.httpBody = bodyString.data(using: .utf8)
-        
-        do {
-            let (data, response) = try await executeRequest(request)
-            guard response.statusCode == 200,
-                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let success = json["success"] as? Bool, success else {
-                return false
-            }
-            return true
-        } catch {
-            return false
         }
     }
     

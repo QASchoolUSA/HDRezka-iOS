@@ -11,6 +11,7 @@ public struct SettingsView: View {
     @State private var showResetAlert: Bool = false
     @State private var accountUsername: String = UserDefaults.standard.string(forKey: "rezka_username") ?? ""
     @State private var accountPassword: String = ""
+    @State private var manualCookieInput: String = ""
     @State private var isLoggingIn: Bool = false
     @State private var isLoggedIn: Bool = UserDefaults.standard.bool(forKey: "rezka_logged_in")
     @State private var loginMessage: String? = nil
@@ -143,6 +144,39 @@ public struct SettingsView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .disabled(isLoggingIn || accountUsername.isEmpty || accountPassword.isEmpty)
+                        
+                        Divider().background(Color.white.opacity(0.1)).padding(.vertical, 4)
+                        
+                        // Or paste cookie string directly
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Or Import Cookie String (from browser):")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(RezkaTheme.textSecondary)
+                            
+                            HStack {
+                                TextField("dle_user_id=...; dle_password=...", text: $manualCookieInput)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(RezkaTheme.bgCard)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                
+                                Button("Import") {
+                                    if !manualCookieInput.isEmpty {
+                                        Task {
+                                            await HDRezkaScraperEngine.shared.setManualCookieString(manualCookieInput)
+                                            isLoggedIn = true
+                                            UserDefaults.standard.set(true, forKey: "rezka_logged_in")
+                                            UserDefaults.standard.set("Imported Session", forKey: "rezka_username")
+                                            loginMessage = "✅ Cookies imported successfully! 1080p/4K active."
+                                            manualCookieInput = ""
+                                        }
+                                    }
+                                }
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(RezkaTheme.accentCyan)
+                            }
+                        }
                     }
                 }
             }
@@ -165,7 +199,7 @@ public struct SettingsView: View {
                 UserDefaults.standard.set(accountUsername, forKey: "rezka_username")
                 loginMessage = "✅ Successfully logged in! 1080p/4K streams enabled."
             } else {
-                loginMessage = "❌ Invalid username/password or mirror error. Please check credentials."
+                loginMessage = "❌ Invalid username/password or mirror connection error. Try importing cookies or checking active mirror."
             }
         }
     }

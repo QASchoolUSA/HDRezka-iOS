@@ -123,7 +123,32 @@ function forwardRequest(targetUrl: URL, method: string, headers: http.IncomingHt
           }
         }
 
-        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+        // Sanitize Set-Cookie headers for client & update server-side cookie jar
+        const rawSetCookies = proxyRes.headers["set-cookie"];
+        const responseHeaders = { ...proxyRes.headers };
+        if (rawSetCookies && rawSetCookies.length > 0) {
+          for (const c of rawSetCookies) {
+            const firstPart = c.split(";")[0];
+            const [k, ...v] = firstPart.split("=");
+            if (k && v.length > 0) {
+              const val = v.join("=");
+              if (val !== "deleted" && val.length > 0) {
+                const current = sessionCookies[fastestMirror] || "";
+                const map: Record<string, string> = {};
+                for (const item of current.split(";")) {
+                  const p = item.trim().split("=");
+                  if (p[0] && p[1]) map[p[0]] = p[1];
+                }
+                map[k.trim()] = val.trim();
+                sessionCookies[fastestMirror] = Object.entries(map).map(([x, y]) => `${x}=${y}`).join("; ");
+              }
+            }
+          }
+          // Strip domain from set-cookie so client URLSession accepts it for proxy host
+          responseHeaders["set-cookie"] = rawSetCookies.map((c) => c.replace(/domain=[^;]+;?/gi, ""));
+        }
+
+        res.writeHead(proxyRes.statusCode || 200, responseHeaders);
         res.end(fullBuffer);
       });
     }

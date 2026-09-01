@@ -19,6 +19,7 @@ public actor MirrorManager {
     public static let shared = MirrorManager()
     
     public static let defaultMirrors: [String] = [
+        "http://192.168.1.147:7890",
         "https://rezka.ag",
         "https://hdrezka.ag",
         "https://hdrezka.me",

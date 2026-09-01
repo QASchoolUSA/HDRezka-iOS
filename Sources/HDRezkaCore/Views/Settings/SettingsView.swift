@@ -194,26 +194,35 @@ public struct SettingsView: View {
                 
                 Divider().background(Color.white.opacity(0.1))
                 
-                // Convex Realtime Sync
+                // Mac Mini 24/7 Home Node
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Convex Real-Time Sync (Cross-Device)")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                    Text("Syncs continue watching & watchlist across iPhone, iPad, Mac")
-                        .font(.system(size: 11))
-                        .foregroundColor(RezkaTheme.textSecondary)
-                    
-                    TextField("Convex URL: https://happy-otter-123.convex.cloud", text: $convexURLInput)
-                        .font(.system(size: 13))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(RezkaTheme.bgCardHover)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .onSubmit {
-                            Task {
-                                await ConvexSyncManager.shared.configure(convexDeploymentURL: convexURLInput)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Mac Mini 24/7 Home Node")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white)
+                            Text("http://192.168.1.147:7890")
+                                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                                .foregroundColor(RezkaTheme.accentCyan)
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Use Node") {
+                            if let u = URL(string: "http://192.168.1.147:7890") {
+                                Task {
+                                    await MirrorManager.shared.setActiveMirror(u)
+                                    activeMirrorURL = u.absoluteString
+                                }
                             }
                         }
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(RezkaTheme.accentAmber)
+                        .clipShape(Capsule())
+                    }
                 }
             }
             .padding(16)

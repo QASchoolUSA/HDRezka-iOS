@@ -206,6 +206,38 @@ public actor HDRezkaScraperEngine {
         }
     }
     
+    // MARK: - HDRezka Account Login
+    public func login(username: String, password: String) async throws -> Bool {
+        let mirror = await MirrorManager.shared.getActiveMirror()
+        guard let url = URL(string: "/ajax/login/", relativeTo: mirror) else {
+            return false
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        for (k, v) in defaultHeaders {
+            request.setValue(v, forHTTPHeaderField: k)
+        }
+        request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
+        request.setValue("application/x-www-form-urlencoded; charset=UTF-8", forHTTPHeaderField: "Content-Type")
+        request.setValue(mirror.absoluteString, forHTTPHeaderField: "Referer")
+        
+        let bodyString = "login_name=\(username.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&login_password=\(password.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&login_not_save=0"
+        request.httpBody = bodyString.data(using: .utf8)
+        
+        do {
+            let (data, response) = try await executeRequest(request)
+            guard response.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let success = json["success"] as? Bool, success else {
+                return false
+            }
+            return true
+        } catch {
+            return false
+        }
+    }
+    
     // MARK: - Fetch Video Streams & Subtitles
     public func fetchStreams(
         mediaId: String,
@@ -213,7 +245,8 @@ public actor HDRezkaScraperEngine {
         season: Int? = nil,
         episode: Int? = nil,
         action: String = "get_movie",
-        contentType: ContentType = .movie
+        contentType: ContentType = .movie,
+        favsToken: String? = nil
     ) async throws -> StreamBundle {
         let mirror = await MirrorManager.shared.getActiveMirror()
         guard let url = URL(string: "/ajax/get_cdn_series/?t=\(Int(Date().timeIntervalSince1970 * 1000))", relativeTo: mirror) else {
@@ -232,8 +265,15 @@ public actor HDRezkaScraperEngine {
         
         var bodyParams: [String: String] = [
             "id": mediaId,
-            "translator_id": translatorId
+            "translator_id": translatorId,
+            "is_camrip": "0",
+            "is_ads": "0",
+            "is_director": "0"
         ]
+        
+        if let favs = favsToken, !favs.isEmpty {
+            bodyParams["favs"] = favs
+        }
         
         if contentType == .series || (season != nil && episode != nil) {
             bodyParams["action"] = "get_stream"
@@ -384,6 +424,16 @@ public actor HDRezkaScraperEngine {
                 let title = nsString.substring(with: match.range(at: 2)).trimmingCharacters(in: .whitespacesAndNewlines)
                 let isOriginal = title.lowercased().contains("оригинал") || title.lowercased().contains("english")
                 translators.append(Translation(id: trId, title: title, isOriginal: isOriginal, isDefault: translators.isEmpty))
+            }
+        }
+        
+        if translators.isEmpty {
+            if let initMatch = html.range(of: #"initCDN(?:Movies|Series)Events\(\s*\d+\s*,\s*(\d+)"#, options: .regularExpression) {
+                let sub = String(html[initMatch])
+                if let comma = sub.range(of: ",")?.upperBound {
+                    let trId = sub[comma...].replacingOccurrences(of: " ", with: "")
+                    translators.append(Translation(id: trId, title: "HDRezka Дубляж", isOriginal: false, isDefault: true))
+                }
             }
         }
         

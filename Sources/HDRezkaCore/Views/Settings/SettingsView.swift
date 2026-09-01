@@ -9,6 +9,11 @@ public struct SettingsView: View {
     @State private var convexURLInput: String = ""
     @State private var activeMirrorURL: String = ""
     @State private var showResetAlert: Bool = false
+    @State private var accountUsername: String = UserDefaults.standard.string(forKey: "rezka_username") ?? ""
+    @State private var accountPassword: String = ""
+    @State private var isLoggingIn: Bool = false
+    @State private var isLoggedIn: Bool = UserDefaults.standard.bool(forKey: "rezka_logged_in")
+    @State private var loginMessage: String? = nil
     
     public init() {}
     
@@ -19,6 +24,9 @@ public struct SettingsView: View {
                 
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 24) {
+                        // HDRezka Account Login Section
+                        accountSection
+                        
                         // Mirror Management Section
                         mirrorSection
                         
@@ -47,6 +55,118 @@ public struct SettingsView: View {
         }
         .task {
             await loadSettings()
+        }
+    }
+    
+    // MARK: - HDRezka Account Login
+    private var accountSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader(title: "HDRezka Account & VIP (Unlocks 1080p/4K)", icon: "person.crop.circle.badge.checkmark")
+            
+            VStack(spacing: 12) {
+                if isLoggedIn {
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundColor(RezkaTheme.accentAmber)
+                            .font(.system(size: 24))
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Logged In: \(accountUsername)")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.white)
+                            Text("1080p Ultra & 4K Streams Active")
+                                .font(.system(size: 12))
+                                .foregroundColor(RezkaTheme.accentCyan)
+                        }
+                        
+                        Spacer()
+                        
+                        Button("Sign Out") {
+                            UserDefaults.standard.set(false, forKey: "rezka_logged_in")
+                            UserDefaults.standard.removeObject(forKey: "rezka_username")
+                            isLoggedIn = false
+                            accountPassword = ""
+                        }
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.red.opacity(0.15))
+                        .clipShape(Capsule())
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Log in with your free or VIP HDRezka account to stream full 2+ hour movies and series in 1080p/4K directly without restrictions.")
+                            .font(.system(size: 12))
+                            .foregroundColor(RezkaTheme.textSecondary)
+                        
+                        VStack(spacing: 8) {
+                            TextField("Username or Email", text: $accountUsername)
+                                .font(.system(size: 14))
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(RezkaTheme.bgCard)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .autocorrectionDisabled()
+                                #if os(iOS)
+                                .textInputAutocapitalization(.never)
+                                #endif
+                            
+                            SecureField("Password", text: $accountPassword)
+                                .font(.system(size: 14))
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(RezkaTheme.bgCard)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+                        
+                        if let msg = loginMessage {
+                            Text(msg)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(isLoggedIn ? .green : .red)
+                        }
+                        
+                        Button(action: performLogin) {
+                            HStack {
+                                if isLoggingIn {
+                                    ProgressView().tint(.black)
+                                } else {
+                                    Image(systemName: "key.fill")
+                                    Text("Sign In to HDRezka")
+                                }
+                            }
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(RezkaTheme.accentAmber)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .disabled(isLoggingIn || accountUsername.isEmpty || accountPassword.isEmpty)
+                    }
+                }
+            }
+            .padding(16)
+            .glassCard(cornerRadius: 16)
+        }
+    }
+    
+    private func performLogin() {
+        guard !accountUsername.isEmpty, !accountPassword.isEmpty else { return }
+        isLoggingIn = true
+        loginMessage = nil
+        
+        Task {
+            let success = (try? await HDRezkaScraperEngine.shared.login(username: accountUsername, password: accountPassword)) ?? false
+            isLoggingIn = false
+            if success {
+                isLoggedIn = true
+                UserDefaults.standard.set(true, forKey: "rezka_logged_in")
+                UserDefaults.standard.set(accountUsername, forKey: "rezka_username")
+                loginMessage = "✅ Successfully logged in! 1080p/4K streams enabled."
+            } else {
+                loginMessage = "❌ Invalid username/password or mirror error. Please check credentials."
+            }
         }
     }
     

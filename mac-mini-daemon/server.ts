@@ -26,7 +26,7 @@ function decompressBuffer(buffer: Buffer, encoding?: string): string {
   return buffer.toString("utf8");
 }
 
-function solveAnubis(html: string, originalPath: string, mirror: string): Promise<string> {
+function solveAnubis(html: string, originalPath: string, mirror: string, initialCookies?: string[]): Promise<string> {
   return new Promise((resolve) => {
     try {
       const match = html.match(/<script id="anubis_challenge" type="application\/json">([\s\S]*?)<\/script>/);
@@ -48,14 +48,27 @@ function solveAnubis(html: string, originalPath: string, mirror: string): Promis
       const elapsed = Date.now() - start;
 
       const passUrl = `${mirror}/.within.website/x/cmd/anubis/api/pass-challenge?id=${encodeURIComponent(ch.id)}&nonce=${nonce}&response=${hash}&elapsedTime=${elapsed}&redir=${encodeURIComponent(originalPath)}`;
+      const initCookieHeader = (initialCookies || []).map(c => c.split(";")[0]).join("; ");
+
       const req = https.request(passUrl, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-          "Referer": `${mirror}${originalPath}`
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          "Referer": `${mirror}${originalPath}`,
+          "Cookie": initCookieHeader
         }
-      }, (res) => {
-        const setCookies = res.headers["set-cookie"] || [];
-        const authCookie = setCookies.map(c => c.split(";")[0]).join("; ");
+      }, (passRes) => {
+        const setCookies = [
+          ...(initialCookies || []),
+          ...(passRes.headers["set-cookie"] || [])
+        ];
+        const cookieMap: Record<string, string> = {};
+        for (const c of setCookies) {
+          const parts = c.split(";")[0].split("=");
+          const k = parts[0].trim();
+          const v = parts.slice(1).join("=").trim();
+          if (v) cookieMap[k] = v;
+        }
+        const authCookie = Object.entries(cookieMap).map(([k, v]) => `${k}=${v}`).join("; ");
         resolve(authCookie);
       });
       req.on("error", () => resolve(""));
@@ -64,6 +77,67 @@ function solveAnubis(html: string, originalPath: string, mirror: string): Promis
       resolve("");
     }
   });
+}
+
+function forwardRequest(targetUrl: URL, method: string, headers: http.IncomingHttpHeaders, body: Buffer | null, res: http.ServerResponse, retryCount = 0) {
+  const cookie = sessionCookies[fastestMirror] || "";
+  const clientCookie = headers.cookie || "";
+  const combinedCookie = [clientCookie, cookie].filter(Boolean).join("; ");
+
+  const reqHeaders: Record<string, string> = {
+    host: targetUrl.hostname,
+    referer: `${fastestMirror}/`,
+    "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "accept-encoding": "gzip, deflate, br"
+  };
+
+  if (combinedCookie) {
+    reqHeaders["cookie"] = combinedCookie;
+  }
+  if (headers["content-type"]) {
+    reqHeaders["content-type"] = headers["content-type"] as string;
+  }
+  if (headers["x-requested-with"]) {
+    reqHeaders["x-requested-with"] = headers["x-requested-with"] as string;
+  }
+
+  const proxyReq = https.request(
+    targetUrl,
+    {
+      method: method,
+      headers: reqHeaders
+    },
+    (proxyRes) => {
+      let chunks: Buffer[] = [];
+      proxyRes.on("data", (c) => chunks.push(c));
+      proxyRes.on("end", async () => {
+        const fullBuffer = Buffer.concat(chunks);
+        const text = decompressBuffer(fullBuffer, proxyRes.headers["content-encoding"]);
+
+        // If challenge returned and we haven't retried yet, solve and retry immediately!
+        if (text.includes("anubis_challenge") && retryCount === 0) {
+          const authCookie = await solveAnubis(text, targetUrl.pathname + targetUrl.search, fastestMirror, proxyRes.headers["set-cookie"]);
+          if (authCookie) {
+            sessionCookies[fastestMirror] = authCookie;
+            return forwardRequest(targetUrl, method, headers, body, res, retryCount + 1);
+          }
+        }
+
+        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+        res.end(fullBuffer);
+      });
+    }
+  );
+
+  proxyReq.on("error", (err) => {
+    res.writeHead(502, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "Proxy error", message: err.message }));
+  });
+
+  if (body) {
+    proxyReq.write(body);
+  }
+  proxyReq.end();
 }
 
 // Latency checker
@@ -177,49 +251,14 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // Proxy to active mirror with automatic Anubis PoW solving
-  const targetUrl = new URL(reqUrl.pathname + reqUrl.search, fastestMirror);
-  const cookie = sessionCookies[fastestMirror] || "";
-
-  const proxyReq = https.request(
-    targetUrl,
-    {
-      method: req.method,
-      headers: {
-        ...req.headers,
-        host: targetUrl.hostname,
-        referer: `${fastestMirror}/`,
-        cookie: cookie,
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-      }
-    },
-    (proxyRes) => {
-      let chunks: Buffer[] = [];
-      proxyRes.on("data", (c) => chunks.push(c));
-      proxyRes.on("end", async () => {
-        const fullBuffer = Buffer.concat(chunks);
-        const text = decompressBuffer(fullBuffer, proxyRes.headers["content-encoding"]);
-
-        if (text.includes("anubis_challenge")) {
-          // Solve Anubis in background & update cookies
-          const authCookie = await solveAnubis(text, reqUrl.pathname + reqUrl.search, fastestMirror);
-          if (authCookie) {
-            sessionCookies[fastestMirror] = authCookie;
-          }
-        }
-
-        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-        res.end(fullBuffer);
-      });
-    }
-  );
-
-  proxyReq.on("error", (err) => {
-    res.writeHead(502, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Proxy error", message: err.message }));
+  // Read request body if present
+  let bodyChunks: Buffer[] = [];
+  req.on("data", (chunk) => bodyChunks.push(chunk));
+  req.on("end", () => {
+    const targetUrl = new URL(reqUrl.pathname + reqUrl.search, fastestMirror);
+    const body = bodyChunks.length > 0 ? Buffer.concat(bodyChunks) : null;
+    forwardRequest(targetUrl, req.method || "GET", req.headers, body, res);
   });
-
-  req.pipe(proxyReq);
 });
 
 server.listen(PORT, "0.0.0.0", () => {

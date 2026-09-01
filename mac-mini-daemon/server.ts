@@ -1,14 +1,7 @@
-/**
- * Mac Mini 24/7 Companion Daemon
- * 
- * Runs continuously on your Mac Mini to provide:
- * 1. Residential Network Proxy & Stream Cache
- * 2. 24/7 Mirror Health Monitoring & Discovery
- * 3. Local High-Speed API Gateway for Home Apple Devices
- */
-
 import http from "http";
 import https from "https";
+import crypto from "crypto";
+import zlib from "zlib";
 import { URL } from "url";
 
 const PORT = 7890;
@@ -20,32 +13,75 @@ const MIRRORS = [
   "https://hdrezka.ac"
 ];
 
-let fastestMirror = MIRRORS[0];
-let mirrorLatencies: Record<string, number | null> = {};
+let fastestMirror = "https://rezka.ag";
+const mirrorLatencies: Record<string, number | null> = {};
+const sessionCookies: Record<string, string> = {};
 
-// Periodic Mirror Health Checker every 60 seconds
+function decompressBuffer(buffer: Buffer, encoding?: string): string {
+  try {
+    if (encoding === "gzip") return zlib.gunzipSync(buffer).toString("utf8");
+    if (encoding === "deflate") return zlib.inflateSync(buffer).toString("utf8");
+    if (encoding === "br") return zlib.brotliDecompressSync(buffer).toString("utf8");
+  } catch (e) {}
+  return buffer.toString("utf8");
+}
+
+function solveAnubis(html: string, originalPath: string, mirror: string): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const match = html.match(/<script id="anubis_challenge" type="application\/json">([\s\S]*?)<\/script>/);
+      if (!match) return resolve("");
+      const json = JSON.parse(match[1]);
+      const ch = json.challenge;
+      const difficulty = ch.difficulty || 2;
+      const targetPrefix = "0".repeat(difficulty);
+      const start = Date.now();
+      let nonce = 0;
+      let hash = "";
+
+      while (true) {
+        hash = crypto.createHash("sha256").update(ch.randomData + nonce).digest("hex");
+        if (hash.startsWith(targetPrefix)) break;
+        nonce++;
+        if (nonce > 1_000_000) break;
+      }
+      const elapsed = Date.now() - start;
+
+      const passUrl = `${mirror}/.within.website/x/cmd/anubis/api/pass-challenge?id=${encodeURIComponent(ch.id)}&nonce=${nonce}&response=${hash}&elapsedTime=${elapsed}&redir=${encodeURIComponent(originalPath)}`;
+      const req = https.request(passUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          "Referer": `${mirror}${originalPath}`
+        }
+      }, (res) => {
+        const setCookies = res.headers["set-cookie"] || [];
+        const authCookie = setCookies.map(c => c.split(";")[0]).join("; ");
+        resolve(authCookie);
+      });
+      req.on("error", () => resolve(""));
+      req.end();
+    } catch {
+      resolve("");
+    }
+  });
+}
+
+// Latency checker
 async function checkMirrors() {
   for (const mirror of MIRRORS) {
     const start = Date.now();
     try {
-      const parsed = new URL(mirror);
+      const u = new URL(mirror);
       const req = https.request(
         {
-          hostname: parsed.hostname,
-          port: 443,
+          hostname: u.hostname,
           path: "/",
           method: "HEAD",
           timeout: 4000,
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-          }
+          headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" }
         },
         (res) => {
-          if (res.statusCode && res.statusCode < 400) {
-            mirrorLatencies[mirror] = Date.now() - start;
-          } else {
-            mirrorLatencies[mirror] = null;
-          }
+          mirrorLatencies[mirror] = Date.now() - start;
         }
       );
       req.on("error", () => {
@@ -57,7 +93,6 @@ async function checkMirrors() {
     }
   }
 
-  // Pick fastest alive mirror
   let best = fastestMirror;
   let minMs = Infinity;
   for (const [m, ms] of Object.entries(mirrorLatencies)) {
@@ -72,8 +107,7 @@ async function checkMirrors() {
 setInterval(checkMirrors, 60_000);
 checkMirrors();
 
-const server = http.createServer((req, res) => {
-  // CORS
+const server = http.createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "*");
@@ -143,8 +177,10 @@ const server = http.createServer((req, res) => {
     }
   }
 
-  // Proxy / Forward request to active mirror
+  // Proxy to active mirror with automatic Anubis PoW solving
   const targetUrl = new URL(reqUrl.pathname + reqUrl.search, fastestMirror);
+  const cookie = sessionCookies[fastestMirror] || "";
+
   const proxyReq = https.request(
     targetUrl,
     {
@@ -153,12 +189,28 @@ const server = http.createServer((req, res) => {
         ...req.headers,
         host: targetUrl.hostname,
         referer: `${fastestMirror}/`,
+        cookie: cookie,
         "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
       }
     },
     (proxyRes) => {
-      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-      proxyRes.pipe(res);
+      let chunks: Buffer[] = [];
+      proxyRes.on("data", (c) => chunks.push(c));
+      proxyRes.on("end", async () => {
+        const fullBuffer = Buffer.concat(chunks);
+        const text = decompressBuffer(fullBuffer, proxyRes.headers["content-encoding"]);
+
+        if (text.includes("anubis_challenge")) {
+          // Solve Anubis in background & update cookies
+          const authCookie = await solveAnubis(text, reqUrl.pathname + reqUrl.search, fastestMirror);
+          if (authCookie) {
+            sessionCookies[fastestMirror] = authCookie;
+          }
+        }
+
+        res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+        res.end(fullBuffer);
+      });
     }
   );
 

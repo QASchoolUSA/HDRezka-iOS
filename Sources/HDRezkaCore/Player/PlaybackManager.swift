@@ -93,9 +93,10 @@ public final class PlaybackManager: ObservableObject {
             bundle = try? await HDRezkaScraperEngine.shared.fetchStreams(
                 mediaId: item.id,
                 translatorId: targetTranslator.id,
-                contentType: item.contentType,
                 season: season?.number,
-                episode: episode?.episodeNumber
+                episode: episode?.episodeNumber,
+                action: (season != nil) ? "get_stream" : "get_movie",
+                contentType: item.contentType
             )
         }
         

@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public actor HDRezkaScraperEngine {
     public static let shared = HDRezkaScraperEngine()
@@ -15,11 +16,89 @@ public actor HDRezkaScraperEngine {
     
     public init() {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 12.0
-        config.timeoutIntervalForResource = 30.0
+        config.timeoutIntervalForRequest = 10.0
+        config.timeoutIntervalForResource = 25.0
         config.httpCookieAcceptPolicy = .always
         config.httpShouldSetCookies = true
         self.session = URLSession(configuration: config)
+    }
+    
+    // MARK: - Execute Request with Anubis PoW Auto-Solver
+    private func executeRequest(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        
+        // Check if Anubis anti-bot challenge was returned
+        if let html = String(data: data, encoding: .utf8), html.contains("anubis_challenge") {
+            if let solved = try? await solveAnubisChallenge(from: html, originalRequest: request) {
+                return solved
+            }
+        }
+        
+        return (data, httpResponse)
+    }
+    
+    private func solveAnubisChallenge(from html: String, originalRequest: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        guard let challengeRange = html.range(of: "<script id=\"anubis_challenge\" type=\"application/json\">"),
+              let endRange = html[challengeRange.upperBound...].range(of: "</script>") else {
+            throw URLError(.cannotParseResponse)
+        }
+        
+        let jsonString = String(html[challengeRange.upperBound..<endRange.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let jsonData = jsonString.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+              let challengeObj = json["challenge"] as? [String: Any],
+              let id = challengeObj["id"] as? String,
+              let randomData = challengeObj["randomData"] as? String else {
+            throw URLError(.cannotParseResponse)
+        }
+        
+        let difficulty = challengeObj["difficulty"] as? Int ?? 2
+        let targetPrefix = String(repeating: "0", count: difficulty)
+        
+        // Solve SHA256 PoW
+        let startTime = Date()
+        var nonce = 0
+        var foundHash = ""
+        
+        while true {
+            let candidate = "\(randomData)\(nonce)"
+            let digest = SHA256.hash(data: Data(candidate.utf8))
+            let hex = digest.map { String(format: "%02x", $0) }.joined()
+            if hex.hasPrefix(targetPrefix) {
+                foundHash = hex
+                break
+            }
+            nonce += 1
+            if nonce > 2_000_000 { break }
+        }
+        
+        let elapsedMs = max(1, Int(Date().timeIntervalSince(startTime) * 1000))
+        guard let originalURL = originalRequest.url else { throw URLError(.badURL) }
+        let baseURL = originalURL.scheme.flatMap { s in originalURL.host.map { h in "\(s)://\(h)" } } ?? "https://rezka.ag"
+        let redirPath = originalURL.path + (originalURL.query.map { "?\($0)" } ?? "")
+        
+        guard let passURL = URL(string: "\(baseURL)/.within.website/x/cmd/anubis/api/pass-challenge?id=\(id)&nonce=\(nonce)&response=\(foundHash)&elapsedTime=\(elapsedMs)&redir=\(redirPath.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") else {
+            throw URLError(.badURL)
+        }
+        
+        var passRequest = URLRequest(url: passURL)
+        for (k, v) in defaultHeaders {
+            passRequest.setValue(v, forHTTPHeaderField: k)
+        }
+        passRequest.setValue(originalURL.absoluteString, forHTTPHeaderField: "Referer")
+        
+        // Execute pass-challenge to store session cookies in URLSession
+        _ = try? await session.data(for: passRequest)
+        
+        // Re-execute original request with newly set auth cookies
+        let (retryData, retryResponse) = try await session.data(for: originalRequest)
+        guard let retryHttp = retryResponse as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+        return (retryData, retryHttp)
     }
     
     // MARK: - Fetch Catalog Feeds
@@ -41,7 +120,7 @@ public actor HDRezkaScraperEngine {
         }
         
         guard let url = URL(string: path, relativeTo: mirror) else {
-            return MockDataProvider.mockTrendingItems()
+            return MockDataProvider.mockTrendingItems(for: contentType)
         }
         
         var request = URLRequest(url: url)
@@ -51,16 +130,16 @@ public actor HDRezkaScraperEngine {
         request.setValue(mirror.absoluteString, forHTTPHeaderField: "Referer")
         
         do {
-            let (data, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+            let (data, response) = try await executeRequest(request)
+            guard response.statusCode == 200,
                   let html = String(data: data, encoding: .utf8) else {
-                return MockDataProvider.mockTrendingItems()
+                return MockDataProvider.mockTrendingItems(for: contentType)
             }
             
             let items = parseCatalogHTML(html, defaultType: contentType, baseURL: mirror)
-            return items.isEmpty ? MockDataProvider.mockTrendingItems() : items
+            return items.isEmpty ? MockDataProvider.mockTrendingItems(for: contentType) : items
         } catch {
-            return MockDataProvider.mockTrendingItems()
+            return MockDataProvider.mockTrendingItems(for: contentType)
         }
     }
     
@@ -83,8 +162,8 @@ public actor HDRezkaScraperEngine {
         request.setValue(mirror.absoluteString, forHTTPHeaderField: "Referer")
         
         do {
-            let (data, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+            let (data, response) = try await executeRequest(request)
+            guard response.statusCode == 200,
                   let html = String(data: data, encoding: .utf8) else {
                 return MockDataProvider.searchMocks(query: query)
             }
@@ -98,29 +177,25 @@ public actor HDRezkaScraperEngine {
     
     // MARK: - Fetch Media Details
     public func fetchDetails(for item: MediaItem) async throws -> MediaDetail {
-        let mirror = await MirrorManager.shared.getActiveMirror()
-        let detailURL: URL
-        if item.detailsPath.hasPrefix("http") {
-            guard let u = URL(string: item.detailsPath) else {
-                return MockDataProvider.mockDetail(for: item)
-            }
-            detailURL = u
-        } else {
-            guard let u = URL(string: item.detailsPath, relativeTo: mirror) else {
-                return MockDataProvider.mockDetail(for: item)
-            }
-            detailURL = u
+        let path = item.detailsPath
+        guard !path.isEmpty else {
+            return MockDataProvider.mockDetail(for: item)
         }
         
-        var request = URLRequest(url: detailURL)
+        let mirror = await MirrorManager.shared.getActiveMirror()
+        guard let url = URL(string: path, relativeTo: mirror) else {
+            return MockDataProvider.mockDetail(for: item)
+        }
+        
+        var request = URLRequest(url: url)
         for (key, value) in defaultHeaders {
             request.setValue(value, forHTTPHeaderField: key)
         }
         request.setValue(mirror.absoluteString, forHTTPHeaderField: "Referer")
         
         do {
-            let (data, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+            let (data, response) = try await executeRequest(request)
+            guard response.statusCode == 200,
                   let html = String(data: data, encoding: .utf8) else {
                 return MockDataProvider.mockDetail(for: item)
             }
@@ -131,17 +206,18 @@ public actor HDRezkaScraperEngine {
         }
     }
     
-    // MARK: - Fetch Stream Bundle
+    // MARK: - Fetch Video Streams & Subtitles
     public func fetchStreams(
         mediaId: String,
         translatorId: String,
-        contentType: ContentType,
         season: Int? = nil,
-        episode: Int? = nil
+        episode: Int? = nil,
+        action: String = "get_movie",
+        contentType: ContentType = .movie
     ) async throws -> StreamBundle {
         let mirror = await MirrorManager.shared.getActiveMirror()
         guard let url = URL(string: "/ajax/get_cdn_series/?t=\(Int(Date().timeIntervalSince1970 * 1000))", relativeTo: mirror) else {
-            return MockDataProvider.mockStreamBundle(season: season, episode: episode, translationId: translatorId)
+            return MockDataProvider.mockStreamBundle(mediaId: mediaId, season: season, episode: episode, translationId: translatorId)
         }
         
         var request = URLRequest(url: url)
@@ -152,6 +228,7 @@ public actor HDRezkaScraperEngine {
         request.setValue("XMLHttpRequest", forHTTPHeaderField: "X-Requested-With")
         request.setValue("application/x-www-form-urlencoded; charset=UTF-8", forHTTPHeaderField: "Content-Type")
         request.setValue(mirror.absoluteString, forHTTPHeaderField: "Referer")
+        request.setValue(mirror.absoluteString, forHTTPHeaderField: "Origin")
         
         var bodyParams: [String: String] = [
             "id": mediaId,
@@ -170,12 +247,12 @@ public actor HDRezkaScraperEngine {
         request.httpBody = bodyString.data(using: .utf8)
         
         do {
-            let (data, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
+            let (data, response) = try await executeRequest(request)
+            guard response.statusCode == 200,
                   let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let success = json["success"] as? Bool, success,
-                  let rawURLPayload = json["url"] as? String else {
-                return MockDataProvider.mockStreamBundle(season: season, episode: episode, translationId: translatorId)
+                  let rawURLPayload = json["url"] as? String, !rawURLPayload.isEmpty else {
+                return MockDataProvider.mockStreamBundle(mediaId: mediaId, season: season, episode: episode, translationId: translatorId)
             }
             
             let decodedManifest = RezkaStreamDecoder.decodeStreamPayload(rawURLPayload)
@@ -186,7 +263,7 @@ public actor HDRezkaScraperEngine {
             let subtitles = RezkaStreamDecoder.parseSubtitles(rawSubtitleString: rawSubs, codes: subLns)
             
             if streams.isEmpty {
-                return MockDataProvider.mockStreamBundle(season: season, episode: episode, translationId: translatorId)
+                return MockDataProvider.mockStreamBundle(mediaId: mediaId, season: season, episode: episode, translationId: translatorId)
             }
             
             return StreamBundle(
@@ -197,7 +274,7 @@ public actor HDRezkaScraperEngine {
                 translationId: translatorId
             )
         } catch {
-            return MockDataProvider.mockStreamBundle(season: season, episode: episode, translationId: translatorId)
+            return MockDataProvider.mockStreamBundle(mediaId: mediaId, season: season, episode: episode, translationId: translatorId)
         }
     }
     
@@ -205,7 +282,6 @@ public actor HDRezkaScraperEngine {
     private func parseCatalogHTML(_ html: String, defaultType: ContentType, baseURL: URL) -> [MediaItem] {
         var items: [MediaItem] = []
         
-        // Match items: class="b-content__inline_item" data-id="..."
         let itemPattern = #"<div class="b-content__inline_item[^"]*"[^>]*data-id="([^"]+)"[^>]*>([\s\S]*?)<\/div>\s*<\/div>"#
         guard let regex = try? NSRegularExpression(pattern: itemPattern, options: []) else { return [] }
         
@@ -217,7 +293,6 @@ public actor HDRezkaScraperEngine {
             let id = nsString.substring(with: match.range(at: 1))
             let contentBlock = nsString.substring(with: match.range(at: 2))
             
-            // Extract URL and Title
             var title = "HD Title"
             var detailsPath = ""
             if let linkMatch = contentBlock.range(of: #"<a href="([^"]+)">([^<]+)<\/a>"#, options: .regularExpression) {
@@ -232,7 +307,6 @@ public actor HDRezkaScraperEngine {
                 }
             }
             
-            // Extract Poster
             var posterURL: URL?
             if let imgMatch = contentBlock.range(of: #"<img src="([^"]+)"#, options: .regularExpression) {
                 let imgStr = String(contentBlock[imgMatch])
@@ -242,16 +316,17 @@ public actor HDRezkaScraperEngine {
                 }
             }
             
-            // Extract Info (Year, Country, Genres)
             var year: Int?
             var country: String?
             var genres: [String] = []
             if let infoMatch = contentBlock.range(of: #"<div>([^<]+)<\/div>"#, options: .regularExpression) {
                 let rawInfo = String(contentBlock[infoMatch])
+                let parts = rawInfo
                     .replacingOccurrences(of: "<div>", with: "")
                     .replacingOccurrences(of: "</div>", with: "")
-                let parts = rawInfo.components(separatedBy: ", ")
-                if let yStr = parts.first, let y = Int(yStr.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                    .components(separatedBy: ", ")
+                
+                if let first = parts.first, let y = Int(first.prefix(4)) {
                     year = y
                 }
                 if parts.count > 1 {
@@ -262,121 +337,87 @@ public actor HDRezkaScraperEngine {
                 }
             }
             
-            // Extract Rating
-            var rating: Double?
-            if let ratingMatch = contentBlock.range(of: #"<i class="rating">([^<]+)<\/i>"#, options: .regularExpression) {
-                let ratingStr = String(contentBlock[ratingMatch])
-                    .replacingOccurrences(of: "<i class=\"rating\">", with: "")
-                    .replacingOccurrences(of: "</i>", with: "")
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                rating = Double(ratingStr)
+            var ratingKP: Double?
+            let ratingIMDB: Double? = nil
+            if let kpMatch = contentBlock.range(of: #"<span class="b-content__inline_item-link[^"]*">([\d\.]+)<\/span>"#, options: .regularExpression) {
+                let kpStr = String(contentBlock[kpMatch])
+                if let start = kpStr.range(of: ">")?.upperBound,
+                   let end = kpStr[start...].range(of: "<")?.lowerBound {
+                    ratingKP = Double(kpStr[start..<end])
+                }
             }
             
-            items.append(MediaItem(
+            let item = MediaItem(
                 id: id,
                 title: title,
+                originalTitle: nil,
                 posterURL: posterURL,
-                ratingIMDB: rating,
+                backdropURL: posterURL,
+                ratingKP: ratingKP,
+                ratingIMDB: ratingIMDB,
                 year: year,
-                genres: genres,
+                genres: genres.isEmpty ? ["Drama", "Action"] : genres,
                 country: country,
+                description: nil,
                 contentType: defaultType,
-                detailsPath: detailsPath
-            ))
+                detailsPath: detailsPath,
+                qualityBadge: "HD",
+                translationCount: nil,
+                ageRating: "16+",
+                durationMinutes: nil
+            )
+            items.append(item)
         }
         
         return items
     }
     
     private func parseDetailHTML(_ html: String, item: MediaItem, baseURL: URL) -> MediaDetail {
-        // Extract Description
-        var description = item.description
-        if let descMatch = html.range(of: #"<div class="b-post__description_text">([\s\S]*?)<\/div>"#, options: .regularExpression) {
-            let descStr = String(html[descMatch])
-                .replacingOccurrences(of: "<div class=\"b-post__description_text\">", with: "")
-                .replacingOccurrences(of: "</div>", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            description = descStr
-        }
-        
-        // Extract Translators
         var translators: [Translation] = []
-        if let listMatch = html.range(of: #"<ul id="translators-list"[\s\S]*?<\/ul>"#, options: .regularExpression) {
-            let listStr = String(html[listMatch])
-            let itemRegex = try? NSRegularExpression(pattern: #"<li[^>]*data-translator_id="([^"]+)"[^>]*>([^<]+)<\/li>"#, options: [])
-            let nsList = listStr as NSString
-            let matches = itemRegex?.matches(in: listStr, options: [], range: NSRange(location: 0, length: nsList.length)) ?? []
-            
-            for (idx, match) in matches.enumerated() {
+        let trPattern = #"<li[^>]*data-translator_id="([^"]+)"[^>]*>([^<]+)<\/li>"#
+        if let regex = try? NSRegularExpression(pattern: trPattern, options: []) {
+            let nsString = html as NSString
+            let matches = regex.matches(in: html, options: [], range: NSRange(location: 0, length: nsString.length))
+            for match in matches {
                 guard match.numberOfRanges >= 3 else { continue }
-                let trId = nsList.substring(with: match.range(at: 1))
-                let trTitle = nsList.substring(with: match.range(at: 2)).trimmingCharacters(in: .whitespacesAndNewlines)
-                translators.append(Translation(
-                    id: trId,
-                    title: trTitle,
-                    isOriginal: trTitle.lowercased().contains("оригинал") || trTitle.lowercased().contains("original"),
-                    isDefault: idx == 0
-                ))
+                let trId = nsString.substring(with: match.range(at: 1))
+                let title = nsString.substring(with: match.range(at: 2)).trimmingCharacters(in: .whitespacesAndNewlines)
+                let isOriginal = title.lowercased().contains("оригинал") || title.lowercased().contains("english")
+                translators.append(Translation(id: trId, title: title, isOriginal: isOriginal, isDefault: translators.isEmpty))
             }
         }
         
         if translators.isEmpty {
-            translators.append(Translation(id: "1", title: "HDRezka Studio (Default)", isDefault: true))
+            translators.append(Translation(id: "1", title: "HDRezka Studio (Дубляж)", isDefault: true))
         }
-        
-        // If series, populate mock or parsed seasons
-        var seasons: [Season] = []
-        if item.contentType == .series || item.contentType == .anime {
-            seasons = MockDataProvider.mockSeasons()
-        }
-        
-        let enrichedItem = MediaItem(
-            id: item.id,
-            title: item.title,
-            originalTitle: item.originalTitle,
-            posterURL: item.posterURL,
-            backdropURL: item.backdropURL,
-            ratingKP: item.ratingKP,
-            ratingIMDB: item.ratingIMDB,
-            year: item.year,
-            genres: item.genres,
-            country: item.country,
-            description: description,
-            contentType: item.contentType,
-            detailsPath: item.detailsPath,
-            qualityBadge: "4K HDR",
-            translationCount: translators.count,
-            ageRating: "16+",
-            durationMinutes: item.durationMinutes ?? 124
-        )
         
         return MediaDetail(
-            item: enrichedItem,
-            director: "Denis Villeneuve",
-            cast: ["Timothée Chalamet", "Zendaya", "Rebecca Ferguson", "Javier Bardem", "Josh Brolin"],
+            item: item,
+            director: "Director",
+            cast: ["Leading Actor", "Co-Star"],
             translators: translators,
-            seasons: seasons,
+            seasons: item.contentType == .series ? MockDataProvider.mockSeasons() : [],
             relatedItems: MockDataProvider.mockTrendingItems().filter { $0.id != item.id }
         )
     }
 }
 
-// MARK: - Mock Data Provider (Zero Network Fallback)
+// MARK: - Mock Data Provider with Distinct Streams per Title
 public enum MockDataProvider {
-    public static func mockTrendingItems() -> [MediaItem] {
-        return [
+    public static func mockTrendingItems(for type: ContentType? = nil) -> [MediaItem] {
+        let all = [
             MediaItem(
                 id: "101",
                 title: "Dune: Part Two",
                 originalTitle: "Dune: Part Two",
                 posterURL: URL(string: "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80"),
                 backdropURL: URL(string: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1600&auto=format&fit=crop&q=80"),
-                ratingKP: 8.6,
+                ratingKP: 8.5,
                 ratingIMDB: 8.8,
                 year: 2024,
-                genres: ["Sci-Fi", "Adventure", "Drama"],
-                country: "USA",
-                description: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family. Facing a choice between the love of his life and the fate of the known universe, he endeavors to prevent a terrible future only he can foresee.",
+                genres: ["Sci-Fi", "Adventure", "Action", "Drama"],
+                country: "USA, Canada",
+                description: "Paul Atreides unites with Chani and the Fremen while seeking revenge against the conspirators who destroyed his family.",
                 contentType: .movie,
                 detailsPath: "/films/fiction/dune-two.html",
                 qualityBadge: "4K HDR",
@@ -450,7 +491,7 @@ public enum MockDataProvider {
                 ratingKP: 8.7,
                 ratingIMDB: 8.9,
                 year: 2024,
-                genres: ["Action", "Adventure", "Drama", "History"],
+                genres: ["Drama", "History", "Adventure", "War"],
                 country: "USA",
                 description: "When a mysterious European ship is found marooned in a nearby fishing village, Lord Yoshii Toranaga discovers secrets that could tip the scales of power.",
                 contentType: .series,
@@ -462,24 +503,29 @@ public enum MockDataProvider {
             ),
             MediaItem(
                 id: "106",
-                title: "Spider-Man: Across the Spider-Verse",
-                originalTitle: "Spider-Man: Across the Spider-Verse",
-                posterURL: URL(string: "https://images.unsplash.com/photo-1635805737707-575885ab0820?w=800&auto=format&fit=crop&q=80"),
-                backdropURL: URL(string: "https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=1600&auto=format&fit=crop&q=80"),
-                ratingKP: 8.6,
-                ratingIMDB: 8.7,
-                year: 2023,
-                genres: ["Animation", "Action", "Adventure"],
+                title: "The Penguin",
+                originalTitle: "The Penguin",
+                posterURL: URL(string: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=800&auto=format&fit=crop&q=80"),
+                backdropURL: URL(string: "https://images.unsplash.com/photo-1514565131-fce0801e5785?w=1600&auto=format&fit=crop&q=80"),
+                ratingKP: 8.4,
+                ratingIMDB: 8.8,
+                year: 2024,
+                genres: ["Crime", "Drama"],
                 country: "USA",
-                description: "Miles Morales catapults across the Multiverse, where he encounters a team of Spider-People charged with protecting its very existence.",
-                contentType: .animation,
-                detailsPath: "/cartoons/spider-verse.html",
-                qualityBadge: "4K HDR",
+                description: "Following the events of The Batman (2022), Oz Cobb, a.k.a. the Penguin, makes a play to seize the reins of the criminal underworld in Gotham City.",
+                contentType: .series,
+                detailsPath: "/series/crime/the-penguin.html",
+                qualityBadge: "1080p Ultra",
                 translationCount: 11,
-                ageRating: "12+",
-                durationMinutes: 140
+                ageRating: "18+",
+                durationMinutes: 58
             )
         ]
+        
+        if let t = type {
+            return all.filter { $0.contentType == t }
+        }
+        return all
     }
     
     public static func searchMocks(query: String) -> [MediaItem] {
@@ -487,15 +533,15 @@ public enum MockDataProvider {
         return mockTrendingItems().filter {
             $0.title.lowercased().contains(q) ||
             ($0.originalTitle?.lowercased().contains(q) ?? false) ||
-            $0.genres.contains(where: { $0.lowercased().contains(q) })
+            $0.genres.contains { $0.lowercased().contains(q) }
         }
     }
     
     public static func mockDetail(for item: MediaItem) -> MediaDetail {
         return MediaDetail(
             item: item,
-            director: "Denis Villeneuve",
-            cast: ["Timothée Chalamet", "Zendaya", "Rebecca Ferguson", "Javier Bardem", "Josh Brolin", "Florence Pugh"],
+            director: item.id == "101" ? "Denis Villeneuve" : (item.id == "104" ? "Christopher Nolan" : "Craig Mazin"),
+            cast: ["Timothée Chalamet", "Zendaya", "Rebecca Ferguson", "Javier Bardem"],
             translators: [
                 Translation(id: "1", title: "HDRezka Studio (Дубляж)", isDefault: true),
                 Translation(id: "238", title: "Red Head Sound (Дубляж)"),
@@ -503,7 +549,7 @@ public enum MockDataProvider {
                 Translation(id: "300", title: "Кубик в Кубе (18+)"),
                 Translation(id: "999", title: "Original (English Audio)", isOriginal: true)
             ],
-            seasons: mockSeasons(),
+            seasons: item.contentType == .series ? mockSeasons() : [],
             relatedItems: mockTrendingItems().filter { $0.id != item.id }
         )
     }
@@ -516,10 +562,7 @@ public enum MockDataProvider {
                 Episode(id: "s1e3", seasonNumber: 1, episodeNumber: 3, title: "In Perpetuity", releaseDate: "4 Mar 2024", isWatched: false, watchProgressSeconds: 1400),
                 Episode(id: "s1e4", seasonNumber: 1, episodeNumber: 4, title: "The You You Are", releaseDate: "11 Mar 2024", isWatched: false, watchProgressSeconds: 0),
                 Episode(id: "s1e5", seasonNumber: 1, episodeNumber: 5, title: "The Grim Barbarity of Optics and Design", releaseDate: "18 Mar 2024", isWatched: false, watchProgressSeconds: 0),
-                Episode(id: "s1e6", seasonNumber: 1, episodeNumber: 6, title: "Hide and Seek", releaseDate: "25 Mar 2024", isWatched: false, watchProgressSeconds: 0),
-                Episode(id: "s1e7", seasonNumber: 1, episodeNumber: 7, title: "Defiant Jazz", releaseDate: "1 Apr 2024", isWatched: false, watchProgressSeconds: 0),
-                Episode(id: "s1e8", seasonNumber: 1, episodeNumber: 8, title: "What's for Dinner?", releaseDate: "8 Apr 2024", isWatched: false, watchProgressSeconds: 0),
-                Episode(id: "s1e9", seasonNumber: 1, episodeNumber: 9, title: "The We We Are", releaseDate: "15 Apr 2024", isWatched: false, watchProgressSeconds: 0)
+                Episode(id: "s1e6", seasonNumber: 1, episodeNumber: 6, title: "Hide and Seek", releaseDate: "25 Mar 2024", isWatched: false, watchProgressSeconds: 0)
             ]),
             Season(number: 2, title: "Season 2", episodes: [
                 Episode(id: "s2e1", seasonNumber: 2, episodeNumber: 1, title: "Return to Lumon", releaseDate: "17 Jan 2025", isWatched: false, watchProgressSeconds: 0),
@@ -529,44 +572,69 @@ public enum MockDataProvider {
         ]
     }
     
-    public static func mockStreamBundle(season: Int? = nil, episode: Int? = nil, translationId: String? = nil) -> StreamBundle {
-        // High quality verified multi-resolution Apple HLS & Mux adaptive streams
+    public static func mockStreamBundle(mediaId: String? = nil, season: Int? = nil, episode: Int? = nil, translationId: String? = nil) -> StreamBundle {
+        let idInt = Int(mediaId ?? "101") ?? 101
+        let ep = episode ?? 1
+        
+        let stream4KUrl: String
+        let stream1080pUrl: String
+        let stream720pUrl: String
+        
+        switch idInt % 4 {
+        case 0:
+            // Movie Group A (e.g. Oppenheimer, Batman)
+            stream4KUrl = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"
+            stream1080pUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            stream720pUrl = "https://media.w3.org/2010/05/sintel/trailer.mp4"
+        case 1:
+            // Movie Group B (e.g. Dune)
+            stream4KUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            stream1080pUrl = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"
+            stream720pUrl = "https://media.w3.org/2010/05/sintel/trailer.mp4"
+        case 2:
+            // Series Group (e.g. Severance, Shogun)
+            stream4KUrl = ep % 2 == 0 
+                ? "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+                : "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"
+            stream1080pUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+            stream720pUrl = "https://media.w3.org/2010/05/sintel/trailer.mp4"
+        default:
+            // Anime Group (e.g. Arcane)
+            stream4KUrl = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"
+            stream1080pUrl = "https://media.w3.org/2010/05/sintel/trailer.mp4"
+            stream720pUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+        
         let streams = [
             StreamOption(
                 quality: .res4K,
                 rawResolutionLabel: "4K Ultra HD",
-                url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!,
-                isHLS: true
+                url: URL(string: stream4KUrl)!,
+                isHLS: stream4KUrl.contains(".m3u8")
             ),
             StreamOption(
                 quality: .res1080pUltra,
                 rawResolutionLabel: "1080p Ultra",
-                url: URL(string: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")!,
-                isHLS: true
+                url: URL(string: stream1080pUrl)!,
+                isHLS: stream1080pUrl.contains(".m3u8")
             ),
             StreamOption(
                 quality: .res1080p,
                 rawResolutionLabel: "1080p",
-                url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!,
-                isHLS: true
+                url: URL(string: stream1080pUrl)!,
+                isHLS: stream1080pUrl.contains(".m3u8")
             ),
             StreamOption(
                 quality: .res720p,
                 rawResolutionLabel: "720p",
-                url: URL(string: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8")!,
-                isHLS: true
-            ),
-            StreamOption(
-                quality: .res480p,
-                rawResolutionLabel: "480p",
-                url: URL(string: "https://media.w3.org/2010/05/sintel/trailer.mp4")!,
-                isHLS: false
+                url: URL(string: stream720pUrl)!,
+                isHLS: stream720pUrl.contains(".m3u8")
             ),
             StreamOption(
                 quality: .auto,
                 rawResolutionLabel: "Auto HLS",
-                url: URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!,
-                isHLS: true
+                url: URL(string: stream4KUrl)!,
+                isHLS: stream4KUrl.contains(".m3u8")
             )
         ]
         
